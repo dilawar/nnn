@@ -260,7 +260,7 @@ static char * const utils[] = {
 #ifdef __APPLE__
 	"/usr/bin/open",
 #else
-	"/usr/bin/xdg-open",
+	"xdg-open",
 #endif
 	"nlay",
 	"atool"
@@ -1055,7 +1055,7 @@ xreadline(char *fname)
 				}
 
 				/* TAB breaks cursor position, ignore it */
-				if (*ch == TAB || *ch == '\t')
+				if (*ch == '\t')
 					continue;
 
 				if (pos < buflen) {
@@ -1094,7 +1094,8 @@ xreadline(char *fname)
 	}
 
 	buf[len] = '\0';
-	if (old_curs != ERR) curs_set(old_curs);
+	if (old_curs != ERR)
+		curs_set(old_curs);
 
 	settimeout();
 	DPRINTF_S(buf);
@@ -1191,6 +1192,7 @@ get_bm_loc(char *key, char *buf)
 		if (xstrcmp(bookmark[r].key, key) == 0) {
 			if (bookmark[r].loc[0] == '~') {
 				char *home = getenv("HOME");
+
 				if (!home) {
 					DPRINTF_S(STR_NOHOME);
 					return NULL;
@@ -1270,6 +1272,7 @@ coolsize(off_t size)
 	static char size_buf[12]; /* Buffer to hold human readable size */
 	static int i;
 	static off_t tmp;
+
 	static long double rem;
 	static const double div_2_pow_10 = 1.0 / 1024.0;
 
@@ -1544,20 +1547,22 @@ show_stats(char *fpath, char *fname, struct stat *sb)
 	/* Show size, blocks, file type */
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 	dprintf(fd, "\n    Size: %-15lld Blocks: %-10lld IO Block: %-6d %s",
+	       (long long)sb->st_size, (long long)sb->st_blocks, sb->st_blksize, desc);
 #else
 	dprintf(fd, "\n    Size: %-15ld Blocks: %-10ld IO Block: %-6ld %s",
+	       sb->st_size, sb->st_blocks, (long)sb->st_blksize, desc);
 #endif
-	       sb->st_size, sb->st_blocks, sb->st_blksize, desc);
 
 	/* Show containing device, inode, hardlink count */
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 	sprintf(g_buf, "%xh/%ud", sb->st_dev, sb->st_dev);
 	dprintf(fd, "\n  Device: %-15s Inode: %-11llu Links: %-9hu",
+		g_buf, (unsigned long long)sb->st_ino, sb->st_nlink);
 #else
-	sprintf(g_buf, "%lxh/%lud", sb->st_dev, sb->st_dev);
+	sprintf(g_buf, "%lxh/%lud", (ulong)sb->st_dev, (ulong)sb->st_dev);
 	dprintf(fd, "\n  Device: %-15s Inode: %-11lu Links: %-9lu",
+		g_buf, sb->st_ino, (ulong)sb->st_nlink);
 #endif
-		g_buf, sb->st_ino, sb->st_nlink);
 
 	/* Show major, minor number for block or char device */
 	if (perms[0] == 'b' || perms[0] == 'c')
@@ -1617,7 +1622,7 @@ get_fs_free(const char *path)
 	if (statvfs(path, &svb) == -1)
 		return 0;
 	else
-		return svb.f_bavail << (ffsl(svb.f_frsize) - 1);
+		return svb.f_bavail << ffs(svb.f_frsize >> 1);
 }
 
 static size_t
@@ -1628,7 +1633,7 @@ get_fs_capacity(const char *path)
 	if (statvfs(path, &svb) == -1)
 		return 0;
 	else
-		return svb.f_blocks << (ffsl(svb.f_bsize) - 1);
+		return svb.f_blocks << ffs(svb.f_bsize >> 1);
 }
 
 static int
@@ -1675,8 +1680,8 @@ show_help(char *path)
 	int i = 0, fd = mkstemp(tmp);
 	char *start, *end;
 	static char helpstr[] = (
-           "cKey | Function\n"
-             "e- + -\n"
+	   "cKey | Function\n"
+	     "e- + -\n"
       "7↑, k, ^P | Previous entry\n"
       "7↓, j, ^N | Next entry\n"
       "7PgUp, ^U | Scroll half page up\n"
@@ -1685,38 +1690,38 @@ show_help(char *path)
  "2End, G, $, ^E | Last entry\n"
    "4→, ↵, l, ^M | Open file or enter dir\n"
 "1←, Bksp, h, ^H | Go to parent dir\n"
-            "d^O | Open with...\n"
-        "9Insert | Toggle navigate-as-you-type\n"
-             "e~ | Go HOME\n"
-             "e& | Go to initial dir\n"
-             "e- | Go to last visited dir\n"
-             "e/ | Filter dir contents\n"
-            "d^/ | Open desktop search tool\n"
-             "e. | Toggle hide . files\n"
-             "eb | Bookmark prompt\n"
-            "d^B | Pin current dir\n"
-            "d^V | Go to pinned dir\n"
-             "ec | Change dir prompt\n"
-             "ed | Toggle detail view\n"
-             "eD | File details\n"
-             "em | Brief media info\n"
-             "eM | Full media info\n"
-             "en | Create new\n"
-            "d^R | Rename entry\n"
-             "es | Toggle sort by size\n"
-             "eS | Toggle du mode\n"
-             "et | Toggle sort by mtime\n"
-             "e! | Spawn SHELL in dir\n"
-             "ee | Edit entry in EDITOR\n"
-             "eo | Open dir in file manager\n"
-             "ep | Open entry in PAGER\n"
-             "eF | List archive\n"
-            "d^X | Extract archive\n"
-            "d^K | Invoke file path copier\n"
-            "d^L | Redraw, clear prompt\n"
-             "e? | Help, settings\n"
-             "eQ | Quit and cd\n"
-         "aq, ^Q | Quit\n\n");
+	    "d^O | Open with...\n"
+	"9Insert | Toggle navigate-as-you-type\n"
+	     "e~ | Go HOME\n"
+	     "e& | Go to initial dir\n"
+	     "e- | Go to last visited dir\n"
+	     "e/ | Filter dir contents\n"
+	    "d^/ | Open desktop search tool\n"
+	     "e. | Toggle hide . files\n"
+	     "eb | Bookmark prompt\n"
+	    "d^B | Pin current dir\n"
+	    "d^V | Go to pinned dir\n"
+	     "ec | Change dir prompt\n"
+	     "ed | Toggle detail view\n"
+	     "eD | File details\n"
+	     "em | Brief media info\n"
+	     "eM | Full media info\n"
+	     "en | Create new\n"
+	    "d^R | Rename entry\n"
+	     "es | Toggle sort by size\n"
+	     "eS | Toggle du mode\n"
+	     "et | Toggle sort by mtime\n"
+	     "e! | Spawn SHELL in dir\n"
+	     "ee | Edit entry in EDITOR\n"
+	     "eo | Open dir in file manager\n"
+	     "ep | Open entry in PAGER\n"
+	     "eF | List archive\n"
+	    "d^X | Extract archive\n"
+	    "d^K | Invoke file path copier\n"
+	    "d^L | Redraw, clear prompt\n"
+	     "e? | Help, settings\n"
+	     "eQ | Quit and cd\n"
+	 "aq, ^Q | Quit\n\n");
 
 	if (fd == -1)
 		return -1;
@@ -1991,6 +1996,7 @@ populate(char *path, char *oldname, char *fltr)
 
 #ifdef DEBUGMODE
 	struct timespec ts1, ts2;
+
 	clock_gettime(CLOCK_REALTIME, &ts1); /* Use CLOCK_MONOTONIC on FreeBSD */
 #endif
 
@@ -2005,6 +2011,7 @@ populate(char *path, char *oldname, char *fltr)
 
 	/* Find cur from history */
 	cur = dentfind(dents, oldname, ndents);
+	regfree(&re);
 	return 0;
 }
 
@@ -2738,10 +2745,10 @@ nochange:
 			r = getch();
 			settimeout();
 			if (r == 'f') {
-				r = openat(fd, tmp, O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+				r = openat(fd, tmp, O_CREAT, 0666);
 				close(r);
 			} else if (r == 'd')
-				r = mkdirat(fd, tmp, S_IRWXU | S_IRWXG | S_IRWXO);
+				r = mkdirat(fd, tmp, 0777);
 			else {
 				close(fd);
 				break;
