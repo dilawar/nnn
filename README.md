@@ -25,7 +25,7 @@ Cool things you can do with `nnn`:
 - *navigate-as-you-type* (*search-as-you-type* enabled even on directory switch)
 - check disk usage with number of files in current directory tree
 - run desktop search utility (gnome-search-tool or catfish) in any directory
-- copy absolute file path to clipboard, spawn a terminal and use the file path
+- copy absolute file paths to clipboard, spawn a terminal and use the paths
 - navigate instantly using shortcuts like `~`, `-`, `&` or handy bookmarks
 - use `cd .....` at chdir prompt to go to a parent directory
 - detailed file stats, media info, list and extract archives
@@ -67,7 +67,8 @@ Have fun with it! PRs are welcome. Check out [#1](https://github.com/jarun/nnn/i
   - [add bookmarks](#add-bookmarks)
   - [use cd .....](#use-cd-)
   - [cd on quit](#cd-on-quit)
-  - [copy file path to clipboard](#copy-file-path-to-clipboard)
+  - [copy file paths to clipboard](#copy-file-paths-to-clipboard)
+  - [copy file paths when X is missing](#copy-file-paths-when-x-is-missing)
   - [change dir color](#change-dir-color)
   - [file copy, move, delete](#file-copy-move-delete)
   - [boost chdir prompt](#boost-chdir-prompt)
@@ -90,7 +91,7 @@ Have fun with it! PRs are welcome. Check out [#1](https://github.com/jarun/nnn/i
   - Jump to initial dir, chdir prompt, cd ..... (with . as PWD)
   - Roll-over at edges, page through entries
   - Show directories in custom color (default: enabled in blue)
-- Disk usage analyzer mode
+- Disk usage analyzer (du) mode
 - Search
   - Filter directory contents with *search-as-you-type*
   - Desktop search (default gnome-search-tool, customizable) integration
@@ -101,20 +102,20 @@ Have fun with it! PRs are welcome. Check out [#1](https://github.com/jarun/nnn/i
   - Customizable bash script [nlay](https://github.com/jarun/nnn/wiki/all-about-nlay) to handle actions
 - Information
   - Basic and detail view
-  - Detailed file information
+  - Detailed stat-like file information
   - Media information (needs mediainfo or exiftool, if specified)
 - Ordering
   - Numeric order (1, 2, ... 10, 11, ...) for numeric names
   - Sort by file name, modification time, size
 - Convenience
   - Create, rename files and directories
+  - Batch rename current directory entries in vidir (from moreutils)
   - Spawn SHELL (fallback sh) in the current directory
-  - Invoke file path copier (*easy* shell integration)
+  - Copy absolute file paths with/without X (*easy* shell integration)
   - Change directory at exit (*easy* shell integration)
   - Open any file in EDITOR (fallback vi) or PAGER (fallback less)
   - List and extract archives (needs atool)
   - Open current directory in a custom GUI file browser
-  - Monitor directory changes
   - Terminal screensaver (default vlock, customizable) integration
 - Unicode support
 - Highly optimized code, minimal resource usage
@@ -150,7 +151,8 @@ Intrigued? Find out [HOW](https://github.com/jarun/nnn/wiki/performance-factors)
 
 - [AUR](https://aur.archlinux.org/packages/nnn/)
 - [Debian](https://packages.debian.org/search?keywords=nnn&searchon=names&exact=1)
-- [FreeBSD](https://www.freshports.org/misc/nnn)
+- [FreeBSD](https://www.freshports.org/misc/nnn) (`pkg install nnn`)
+- [Gentoo](https://packages.gentoo.org/packages/app-misc/nnn) (`emerge nnn`)
 - [Homebrew](http://formulae.brew.sh/formula/nnn)
 - [NixOS](https://github.com/NixOS/nixpkgs/tree/master/pkgs/applications/misc/nnn) (`sudo nix-env -i nnn`)
 - [openSUSE](https://software.opensuse.org/package/nnn)
@@ -226,8 +228,8 @@ optional arguments:
               / | Filter dir contents
              ^/ | Open desktop search tool
               . | Toggle hide . files
-              b | Bookmark prompt
-             ^B | Pin current dir
+             ^B | Bookmark prompt
+              b | Pin current dir
              ^V | Go to pinned dir
               c | Change dir prompt
               d | Toggle detail view
@@ -236,20 +238,23 @@ optional arguments:
               M | Full media info
               n | Create new
              ^R | Rename entry
+              R | Rename dir entries
               s | Toggle sort by size
-              S | Toggle du mode
+          S, ^J | Toggle du mode
               t | Toggle sort by mtime
               ! | Spawn SHELL in dir
               e | Edit entry in EDITOR
               o | Open dir in file manager
               p | Open entry in PAGER
               F | List archive
-             ^X | Extract archive
+             ^F | Extract archive
              ^K | Invoke file path copier
+             ^Y | Toggle multi-copy mode
+             ^T | Toggle path quote
              ^L | Redraw, clear prompt
               ? | Help, settings
-              Q | Quit and cd
-          q, ^Q | Quit
+          Q, ^G | Quit and cd
+          q, ^X | Quit
 ```
 
 Help & settings, file details, media info and archive listing are shown in the PAGER. Please use the PAGER-specific keys in these screens.
@@ -259,7 +264,7 @@ Help & settings, file details, media info and archive listing are shown in the P
 Filters support regexes to instantly (search-as-you-type) list the matching entries in the current directory.
 
 There are 3 ways to reset a filter:
-- pressing <kbd>^L</kbd>
+- pressing <kbd>^L</kbd> (at the new/rename prompt <kbd>^L</kbd> followed by <kbd>Enter</kbd> discards all changes and exits prompt)
 - a search with no matches
 - an extra backspace at the filter prompt (like vi)
 
@@ -299,6 +304,7 @@ The following abbreviations are used in the detail view:
       export NNN_DE_FILE_MANAGER=nautilus
 - [mediainfo](https://mediaarea.net/en/MediaInfo) (or [exiftool](https://sno.phy.queensu.ca/~phil/exiftool/), if specified) is required to view media information
 - [atool](http://www.nongnu.org/atool/) is required to list and extract archives
+- vidir from [moreutils](https://joeyh.name/code/moreutils/) is used to batch rename entries in current directory
 
 #### Help
 
@@ -324,6 +330,8 @@ Add the following to your shell's rc file for the best experience:
 
 5. Set `NNN_NOWAIT`, if nnn [blocks on your desktop environment](#nnn-blocks-on-opening-files) when a file is open.
 
+6. Press <kbd>?</kbd> for help on keyboard shortcuts anytime.
+
 ### How to
 
 #### add bookmarks
@@ -342,13 +350,16 @@ Pick the appropriate file for your shell from [`scripts/quitcd`](scripts/quitcd)
 
 As you might notice, `nnn` uses the environment variable `NNN_TMPFILE` to write the last visited directory path. You can change it.
 
-#### copy file path to clipboard
+#### copy file paths to clipboard
 
-`nnn` can pipe the absolute path of the current file to a copier script. For example, you can use `xsel` on Linux or `pbcopy` on OS X.
+`nnn` can pipe the absolute path of the current file or multiple files to a copier script. For example, you can use `xsel` on Linux or `pbcopy` on OS X.
 
 Sample Linux copier script:
 
     #!/bin/sh
+
+    # comment the next line to convert newlines to spaces
+    IFS=
 
     echo -n $1 | xsel --clipboard --input
 
@@ -356,7 +367,47 @@ export `NNN_COPIER`:
 
     export NNN_COPIER="/path/to/copier.sh"
 
-Start `nnn` and use <kbd>^K</kbd> to copy the absolute path (from `/`) of the file under the cursor to clipboard.
+Use <kbd>^K</kbd> to copy the absolute path (from `/`) of the file under the cursor to clipboard.
+
+To copy multiple file paths, switch to the multi-copy mode using <kbd>^Y</kbd>. In this mode you can
+
+- select multiple files one by one by pressing <kbd>^K</kbd> on each entry; or,
+- navigate to another file in the same directory to select a range of files.
+
+Pressing <kbd>^Y</kbd> again copies the paths to clipboard and exits the multi-copy mode.
+
+To wrap each file path within single quotes, export `NNN_QUOTE_ON`:
+
+    export NNN_QUOTE_ON=1
+This is particularly useful if you are planning to copy the whole string to the shell to run a command. Quotes can be toggled at runtime using <kbd>^T</kbd>.
+
+#### copy file paths when X is missing
+
+A very common scenario on headless remote servers connected via SSH. As the clipboard is missing, `nnn` copies the path names to the tmp file `/tmp/nnncp`.
+
+To use the copied paths from the cmdline, use command substitution:
+
+    # bash/zsh
+    ls -ltr `cat /tmp/nnncp`
+    ls -ltr $(cat /tmp/nnncp)
+
+    # fish
+    ls -ltr (cat /tmp/nnncp)
+
+An alias may be handy:
+
+    alias ncp='cat /tmp/nnncp'
+
+so you can -
+
+    # bash/zsh
+    ls -ltr `ncp`
+    ls -ltr $(ncp)
+
+    # fish
+    ls -ltr (ncp)
+
+Note that you may want to keep quotes disabled in this case.
 
 #### change dir color
 
@@ -376,7 +427,7 @@ Any other value disables colored directories.
 
 #### boost chdir prompt
 
-`nnn` uses libreadline for the chdir prompt input. So all the fantastic features of readline (e.g. case insensitive tab completion, history, reverse-i-search) is available to you based on your readline [configuration](https://cnswww.cns.cwru.edu/php/chet/readline/readline.html#SEC9).
+`nnn` uses libreadline for the chdir prompt input. So all the fantastic features of readline (e.g. case insensitive tab completion, history, reverse-i-search) are available to you based on your readline [configuration](https://cnswww.cns.cwru.edu/php/chet/readline/readline.html#SEC9).
 
 #### set idle timeout
 
@@ -409,4 +460,4 @@ I chose to fork because:
 
 1. Copyright © 2014-2016 Lazaros Koromilas
 2. Copyright © 2014-2016 Dimitris Papastamos
-3. Copyright © 2016-2017 [Arun Prakash Jana](https://github.com/jarun)
+3. Copyright © 2016-2018 [Arun Prakash Jana](https://github.com/jarun)

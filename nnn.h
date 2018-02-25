@@ -34,9 +34,12 @@ enum action {
 	SEL_MTIME,
 	SEL_REDRAW,
 	SEL_COPY,
+	SEL_COPYMUL,
+	SEL_QUOTE,
 	SEL_OPEN,
 	SEL_NEW,
 	SEL_RENAME,
+	SEL_RENAMEALL,
 	SEL_HELP,
 	SEL_RUN,
 	SEL_RUNARG,
@@ -106,9 +109,9 @@ static struct key bindings[] = {
 	/* Last visited dir */
 	{ '-',            SEL_CDLAST,    "",     "" },
 	/* Change dir using bookmark */
-	{ 'b',            SEL_CDBM,      "",     "" },
+	{ CONTROL('B'),   SEL_CDBM,      "",     "" },
 	/* Mark a path to visit later */
-	{ CONTROL('B'),   SEL_PIN,       "",     "" },
+	{ 'b',            SEL_PIN,       "",     "" },
 	/* Visit marked directory */
 	{ CONTROL('V'),   SEL_VISIT,     "",     "" },
 	/* Filter */
@@ -132,11 +135,12 @@ static struct key bindings[] = {
 	/* List archive */
 	{ 'F',            SEL_LIST,      "-l", "" },
 	/* Extract archive */
-	{ CONTROL('X'),   SEL_EXTRACT,   "-x", "" },
+	{ CONTROL('F'),   SEL_EXTRACT,   "-x", "" },
 	/* Toggle sort by size */
 	{ 's',            SEL_FSIZE,     "",     "" },
 	/* Sort by total block count including dir contents */
 	{ 'S',            SEL_BSIZE,     "",     "" },
+	{ CONTROL('J'),   SEL_BSIZE,     "",     "" },
 	/* Toggle sort by time */
 	{ 't',            SEL_MTIME,     "",     "" },
 	/* Redraw window */
@@ -144,6 +148,10 @@ static struct key bindings[] = {
 	{ KEY_F(5),       SEL_REDRAW,    "",     "" }, /* Undocumented */
 	/* Copy currently selected file path */
 	{ CONTROL('K'),   SEL_COPY,      "",     "" },
+	/* Toggle copy multiple file paths */
+	{ CONTROL('Y'),   SEL_COPYMUL,   "",     "" },
+	/* Toggle quote on while copy */
+	{ CONTROL('T'),   SEL_QUOTE,     "",     "" },
 	/* Open in a custom application */
 	{ CONTROL('O'),   SEL_OPEN,      "",     "" },
 	/* Create a new file */
@@ -151,6 +159,8 @@ static struct key bindings[] = {
 	/* Show rename prompt */
 	{ CONTROL('R'),   SEL_RENAME,    "",     "" },
 	{ KEY_F(2),       SEL_RENAME,    "",     "" }, /* Undocumented */
+	/* Rename contents of current dir */
+	{ 'R',            SEL_RENAMEALL, "",     "" },
 	/* Show help */
 	{ '?',            SEL_HELP,      "",     "" },
 	/* Run command */
@@ -160,7 +170,8 @@ static struct key bindings[] = {
 	{ 'p',            SEL_RUNARG,    "less", "PAGER" },
 	/* Change dir on quit */
 	{ 'Q',            SEL_CDQUIT,    "",     "" },
+	{ CONTROL('G'),   SEL_CDQUIT,    "",     "" },
 	/* Quit */
 	{ 'q',            SEL_QUIT,      "",     "" },
-	{ CONTROL('Q'),   SEL_QUIT,      "",     "" },
+	{ CONTROL('X'),   SEL_QUIT,      "",     "" },
 };
